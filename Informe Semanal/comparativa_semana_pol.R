@@ -32,6 +32,7 @@ cargar_librerias("stringr"    # Manipulación de strings
                  ,"lubridate"  # Herramientas de fecha y hora
                  ,"tidyr"      # Organizador de data tabular
                  ,"openxlsx"   # Manipulación de excel
+                 ,"stringi"     # Manipulacion de strings de caracteres
 )
 
 rm(cargar_librerias)
@@ -57,8 +58,8 @@ rm("wb.espesamiento")
 #################################################################################################################
 
 # Semana de la cual se rescatarán los datos
-semana_inicio <- 19
-semana_termino <- 20
+semana_inicio <- 20
+semana_termino <- 21
 year <- 2020
 
 # Se tabaja con una df temporal para limpiar los datos de los indices de marcha 0
@@ -112,6 +113,7 @@ for (semana in semana_inicio:semana_termino) {
     rm(.tmp_plot)
   }
   
+  print("Comparativa concentracion: Done")
   #################################################################################################################
   # STOCK VS. SCADA
   #################################################################################################################
@@ -121,10 +123,14 @@ for (semana in semana_inicio:semana_termino) {
          width = 15, height = 7, units = "cm", dpi=320)
   rm(temp_plot)
   
+  print("borrar aca 1")
+  
   temp_plot <- fig_scada_stock(.tmp_dh, .tmp_stock, "Deshidratación", 2020)
   ggsave(temp_plot,file=paste(c("polimero_semanal_dh.png"), sep = "", collapse = ""),
          width = 15, height = 7, units = "cm", dpi=320)
   rm(temp_plot)
+  
+  print("Diferencia scada stock semanal: Done")
   
   temp_plot <- fig_polimero_mes(.tmp_esp, .tmp_stock, "Espesamiento", 2020)
   ggsave(temp_plot,file=paste(c("polimero_mensual_esp.png"), sep = "", collapse = ""),
@@ -136,6 +142,8 @@ for (semana in semana_inicio:semana_termino) {
          width = 15, height = 7, units = "cm", dpi=320)
   rm(temp_plot)
   
+  print("Diferencia scada stock mensual: Done")
+  
   temp_plot <- fig_objetivo_anual(.tmp_esp, .tmp_stock, "Espesamiento", 2020, 12)
   ggsave(temp_plot,file=paste(c("objetivo_pol_esp.png"), sep = "", collapse = ""),
          width = 15, height = 7, units = "cm", dpi=320)
@@ -145,5 +153,7 @@ for (semana in semana_inicio:semana_termino) {
   ggsave(temp_plot,file=paste(c("objetivo_pol_dh.png"), sep = "", collapse = ""),
          width = 15, height = 7, units = "cm", dpi=320)
   rm(temp_plot)
+  
+  print("Objetivo anual: Done")
 
 }

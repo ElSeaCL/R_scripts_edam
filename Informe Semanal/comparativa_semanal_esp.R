@@ -48,6 +48,7 @@ df_clasif_esp <- return_clasificacion_esp()
 df_avisos_esp <- return_avisos_esp()
 df_pre_in <- return_df_pre_in()
 df_pre_out <- return_df_pre_out()
+df_cent_in <- return_df_cent_in()
 df_cambi <- return_df_cambi()
 
 # Se remoueven los workbooks que no se van a modificar
@@ -80,8 +81,8 @@ source("T:/PROCESOS/18. Seguimientos/Varios/R scripts/temas/tema_impresion.R")
 
 # Semana de la cual se rescatarán los datos
 tipo <- "Espesamiento"
-semana_inicio <- 19
-semana_termino <- 20
+semana_inicio <- 20
+semana_termino <- 21
 year <- 2020
 
 # Lista de centrífugas a graficar
@@ -128,7 +129,7 @@ for (semana in semana_inicio:semana_termino) {
       }
   
   #################################################################################################################
-  # SERIES TIEMPO RESULTADOS
+  # SERIES TIEMPO PRE-ESPESADORES
   #################################################################################################################
   
   # Intervalo propio de la serie de tiempo. Siempre toma como base
@@ -139,6 +140,25 @@ for (semana in semana_inicio:semana_termino) {
   if (.tmp_semana_inicio <= 0) {
     .tmp_semana_inicio <- 53 + .tmp_semana_inicio
   }
+  
+  # Base con los promedios moviles
+  .tmp_prom <- return_prom_pre(df_cent_in)
+  
+  # figura comparativa de MS
+  temp_plot <- fig_prom_in(.tmp_prom, "MS", year, .tmp_semana_inicio, semana_termino)
+  ggsave(temp_plot,file=paste(c("MS.png"), sep = "", collapse = ""),
+         width = 15, height = 7, units = "cm", dpi=320)
+  rm(temp_plot)
+  
+  # Evolución del MV
+  temp_plot <- fig_prom_in(.tmp_prom, "MV", year, .tmp_semana_inicio, semana_termino)
+  ggsave(temp_plot,file=paste(c("MV.png"), sep = "", collapse = ""),
+         width = 15, height = 7, units = "cm", dpi=320)
+  rm(temp_plot)
+  
+  #################################################################################################################
+  # SERIES TIEMPO RESULTADOS
+  #################################################################################################################
   
   # Base con los promedios calculados
   .tmp_prom <- return_prom_movil(.tmp_esp, filter="CAMBI")
@@ -233,7 +253,6 @@ for (semana in semana_inicio:semana_termino) {
   ggsave(temp_plot, file=paste0("clasificacion_a_la_fecha.png"), 
          width = 15, height = 9, units = "cm", dpi=320)
   rm(temp_plot)
-  
 }
 
 #################################################################################################################

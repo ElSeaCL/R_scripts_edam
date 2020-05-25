@@ -140,6 +140,177 @@ fig_clasificacion_anual <- function(datosResultados, year, semana_inicio,semana_
 }
 
 #################################################################################################################
+# SERIES TIEMPO ENTRADA CENTRIFUGAS
+#################################################################################################################
+
+fig_prom_in <- function(dfCentrifuga, atributo, year, week_inicio, week_termino) {
+  
+  # Atributo puede ser ratio, sequedad o promedio movil
+  atributo <- toupper(atributo)
+  
+  # Se verifica si la semana inicial es mayor a la final
+  # esto significa que estamos lidiando con datos del año pasado
+  if (week_inicio > week_termino) {
+    year_inicio = year - 1
+  } else {
+    year_inicio = year
+  }
+  
+  # Transformación de semana-año a fecha
+  week_inicio <- week_inicio - 1
+  
+  if (week_inicio == 0) {
+    
+    week_inicio <- 52
+    year_inicio <- year_inicio - 1
+    
+  } else if (week_inicio < 10) {
+    week_inicio <- paste0("0", week_inicio)
+    }
+  
+  inicio <- paste0(year_inicio, week_inicio, 1)
+  dia_inicio <- as.Date(inicio, "%Y%W%u")
+  
+  if (week_termino == 53){
+    year <- year + 1
+    for(i in 1:7){
+      
+      termino <- paste0(year, "01", i)
+      dia_termino <- as.Date(termino, "%Y%W%u")
+      
+      if (!(is.na(as.character(dia_termino)))) {
+        break
+      }
+    }
+  } else {
+    if (week_termino < 10) {
+      week_termino <- paste0("0", week_termino)
+    }
+    fin <- paste0(year, week_termino, 7)
+    dia_termino <- as.Date(fin, "%Y%W%u")
+  }
+  
+  fecha <- "fecha"
+  Blue <- "Blue"
+  Red <- "Red"
+  
+  if (atributo == "MS") {
+    atributo1 <- "MSlab_prom"
+    atributo2 <- "MSscada_prom"
+    line <- geom_line(aes_string(x= fecha, y=atributo2, color=Red), size=1)
+    axis <- labs(x="Fecha", y="MS(g/L)")
+    
+    
+  } else {
+    atributo1 <- "MVlab_prom"
+    atributo2 <- NULL
+    axis <- labs(x="Fecha", y="MV(%)")
+    line <- NULL
+  }
+  
+  .tmp_df <- dfCentrifuga %>%
+    filter(fecha >= dia_inicio,
+           fecha <= dia_termino) %>%
+    drop_na(!!atributo1, !!atributo2)
+  
+  limits_y <- c(min(.tmp_df[,atributo1]) -5, max(.tmp_df[,atributo1]) +5)
+  
+  .tmp_plot <- ggplot(.tmp_df) +
+    geom_line(aes_string(x=fecha, y= atributo1, color=Blue), size=1) +
+    line +
+    scale_color_manual(name = "Origen", values = c("Blue" = "Blue", "Red" = "Red"), labels = c("Lab", "SCADA")) +
+    scale_y_continuous(limits = limits_y) +
+    labs(x="Fecha", y="Concentraci\u00F3n (kg/ton)") +
+    labs(title = "Concentraci\u00F3n Lodo Pre-Esp a Centr\u00EDfugas", subtitle = "SCADA vs. Lab") +
+    #theme(legend.position = "none") +
+    axis
+  
+  return(.tmp_plot)
+  
+}
+
+fig_prom_dig <- function(dfCentrifuga, atributo, year, week_inicio, week_termino) {
+  
+  # Atributo puede ser ratio, sequedad o promedio movil
+  atributo <- toupper(atributo)
+  
+  # Se verifica si la semana inicial es mayor a la final
+  # esto significa que estamos lidiando con datos del año pasado
+  if (week_inicio > week_termino) {
+    year_inicio = year - 1
+  } else {
+    year_inicio = year
+  }
+  
+  # Transformación de semana-año a fecha
+  week_inicio <- week_inicio - 1
+  
+  if (week_inicio == 0) {
+    
+    week_inicio <- 52
+    year_inicio <- year_inicio - 1
+    
+  } else if (week_inicio < 10) {
+    week_inicio <- paste0("0", week_inicio)
+  }
+  
+  inicio <- paste0(year_inicio, week_inicio, 1)
+  dia_inicio <- as.Date(inicio, "%Y%W%u")
+  
+  if (week_termino == 53){
+    year <- year + 1
+    for(i in 1:7){
+      
+      termino <- paste0(year, "01", i)
+      dia_termino <- as.Date(termino, "%Y%W%u")
+      
+      if (!(is.na(as.character(dia_termino)))) {
+        break
+      }
+    }
+  } else {
+    if (week_termino < 10) {
+      week_termino <- paste0("0", week_termino)
+    }
+    fin <- paste0(year, week_termino, 7)
+    dia_termino <- as.Date(fin, "%Y%W%u")
+  }
+  
+  fecha <- "fecha"
+  Blue <- "Blue"
+  Red <- "Red"
+  
+  if (atributo == "MS") {
+    atributo1 <- "MS_prom"
+    axis <- labs(x="Fecha", y="MS(g/L)")
+    
+    
+  } else {
+    atributo1 <- "MV_prom"
+    axis <- labs(x="Fecha", y="MV(%)")
+    line <- NULL
+  }
+  
+  .tmp_df <- dfCentrifuga %>%
+    filter(fecha >= dia_inicio,
+           fecha <= dia_termino) %>%
+    drop_na(!!atributo1)
+  
+  limits_y <- c(min(.tmp_df[,atributo1]) -5, max(.tmp_df[,atributo1]) +5)
+  
+  .tmp_plot <- ggplot(.tmp_df) +
+    geom_line(aes_string(x=fecha, y= atributo1, color=Blue), size=1)
+    scale_y_continuous(limits = limits_y) +
+    labs(x="Fecha", y="Concentraci\u00F3n (kg/ton)") +
+    labs(title = "Concentraci\u00F3n Lodo Digerido a Centr\u00EDfugas") +
+    #theme(legend.position = "none") +
+    axis
+  
+  return(.tmp_plot)
+  
+}
+
+#################################################################################################################
 # SERIES TIEMPO RESULTADOS
 #################################################################################################################
 
@@ -221,7 +392,7 @@ fig_prom_movil <- function(dfCentrifugas, atributo, year, week_inicio, week_term
   limits_y <- c(min(.tmp_df[,atributo_prom]) -1, max(.tmp_df[,atributo_prom]) +1)
   
   .tmp_plot <- ggplot(.tmp_df) +
-    geom_line(aes_string(x=fecha, y= atributo_prom), size=1, color="Blue4") +
+    geom_line(aes_string(x=fecha, y= atributo_prom), size=1, color="Blue") +
     geom_point(aes_string(x= fecha, y=atributo_mean), color="Red") +
     scale_y_continuous(limits = limits_y) +
     labs(x="Fecha", y="Ratio (kg/ton)") +
@@ -505,9 +676,9 @@ fig_comparativa_pol <- function(df_comparacion, equipo, fecha_inicio, fecha_term
 fig_scada_stock <- function(dfscada, dfstock, proceso, year){
   
   proceso_plot <- proceso
-  proceso <- stringi::stri_trans_general(proceso, id="Latin-ASCII")
+  #proceso <- stringi::stri_trans_general(proceso_plot, id="Latin-ASCII")
   
-  .tmp_stock <- return_stock_dia(dfstock, proceso, year)
+  .tmp_stock <- return_stock_dia(dfstock, proceso_plot, year)
   
   dfscada %>%
     filter(indice == 1) %>%
@@ -528,7 +699,7 @@ fig_scada_stock <- function(dfscada, dfstock, proceso, year){
 fig_objetivo_anual <- function(dfCent, dfStock, proceso, year, objetivo){
   
   proceso_plot <- proceso
-  proceso <- stringi::stri_trans_general(proceso, id="Latin-ASCII")
+  #proceso <- stringi::stri_trans_general(proceso_plot, id="Latin-ASCII")
   
   .tmp_carga <- dfCent %>%
     filter(ano == year) %>%
@@ -557,7 +728,7 @@ fig_objetivo_anual <- function(dfCent, dfStock, proceso, year, objetivo){
 fig_polimero_mes <- function(dfCent, dfStock, proceso, year, objetivo){
   
   proceso_plot <- proceso
-  proceso <- stringi:stri_trans_general(proceso, id="Latin-ASCII")
+  #proceso <- stringi:stri_trans_general(proceso_plot, id="Latin-ASCII")
   
   .tmp_mes_stock <- return_stock_dia(dfStock, proceso, year) %>%
     mutate(ano_mes = factor(paste0(year(fecha_inicio), mes))) %>%

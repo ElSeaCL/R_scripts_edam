@@ -51,6 +51,7 @@ rm("return_df_esp",
 df_deshidratacion <- return_df_dh()
 df_clasif_dh <- return_clasificacion_dh()
 df_avisos_dh <- return_avisos_dh()
+df_dig <- return_df_dig()
 
 # Se remoueven los workbooks que no se van a modificar
 rm("wb.deshidratacion")
@@ -82,8 +83,8 @@ source("T:/PROCESOS/18. Seguimientos/Varios/R scripts/temas/tema_impresion.R")
 
 # Semana de la cual se rescatarán los datos
 tipo <- "Deshidratacion"
-semana_inicio <- 9
-semana_termino <- 19
+semana_inicio <- 20
+semana_termino <- 21
 year <- 2020
 
 # Lista de centrífugas a graficar
@@ -101,7 +102,7 @@ for (semana in semana_inicio:semana_termino) {
   
   # Crea un directorio para almacenar las figuras
   path <- paste0("T:/PROCESOS/18. Seguimientos/Deshidratacion/Comparativa Deshidratacion/semanal/", year)
-  asigna_wd(path, paste0(semana,"/",tipo))
+  asigna_wd(path, paste0(semana))
   
   for (cent in centrifugas) {
     
@@ -131,7 +132,7 @@ for (semana in semana_inicio:semana_termino) {
   }
   
   #################################################################################################################
-  # SERIES TIEMPO RESULTADOS
+  # SERIES TIEMPO DIGERIDO
   #################################################################################################################
   
   # Intervalo propio de la serie de tiempo. Siempre toma como base
@@ -142,6 +143,23 @@ for (semana in semana_inicio:semana_termino) {
   if (.tmp_semana_inicio <= 0) {
     .tmp_semana_inicio <- 53 + .tmp_semana_inicio
   }
+  
+  .tmp_dig <- return_prom_dig(df_dig)
+  
+  # figuras de ratio, sequedad y tasa de captura
+  temp_plot <- fig_prom_dig(.tmp_dig, "MS", year, .tmp_semana_inicio, semana)
+  ggsave(temp_plot,file=paste(c("MS.png"), sep = "", collapse = ""),
+         width = 15, height = 7.0, units = "cm", dpi=320)
+  rm(temp_plot)
+  
+  temp_plot <- fig_prom_dig(.tmp_dig, "MV", year, .tmp_semana_inicio, semana)
+  ggsave(temp_plot,file=paste(c("MV.png"), sep = "", collapse = ""),
+         width = 15, height = 7.0, units = "cm", dpi=320)
+  rm(temp_plot)
+  
+  #################################################################################################################
+  # SERIES TIEMPO RESULTADOS
+  #################################################################################################################
   
   # Base con los promedios calculados
   .tmp_prom <- return_prom_movil(.tmp_data, filter="Deshidratación")

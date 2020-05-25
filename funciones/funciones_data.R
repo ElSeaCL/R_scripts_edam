@@ -297,6 +297,14 @@ return_df_pre_out <- function() {
   
 }
 
+return_df_cent_in <- function() {
+  resultados <- .load_workbook_esp("cent_in")
+  resultados$MSscada1 <- as.numeric(resultados$MSscada1)
+  resultados$MSlab <- as.numeric(resultados$MSlab)
+  resultados$MVlab <- as.numeric(resultados$MVlab)
+  return(resultados)
+}
+
 return_df_cambi <- function() {
   resultados <- .load_workbook_esp("cambi_prod")
   
@@ -340,6 +348,25 @@ return_df_dh <- function() {
   return(centrifugas)
 }
 
+return_df_dig <- function() {
+  # Carga el worksheet "deseado"centrifugas" perteneciente a
+  # "Comparativo deshidratacion.xlsx"
+  #
+  # Arguments:
+  #  None
+  #
+  # Returns:
+  #  Data Frame con la información obtenida en el libro formateada con los
+  #  tipos de dato listo para ser utilizada.
+  
+  df <- .load_workbook_dh("digestion")
+  
+  df$ms_690 <- as.numeric(df$ms_690)
+  df$porc_lb_690 <- as.numeric(df$porc_lb_690)
+  df$porc_lp_690 <- as.numeric(df$porc_lp_690)
+
+  return(df)
+}
 
 return_clasificacion_dh <- function() {
   # Carga el worksheet "Resultados" perteneciente a
@@ -577,6 +604,38 @@ return_prom_movil <- function(dfCentrifugas, filter=NULL){
   
   return(.tmp_esp_st)
 }
+
+return_prom_pre <- function(df_pre, filter=NULL){
+  
+  .tmp_pre <- df_pre %>%
+    mutate(MSlab_prom = (lag(MSlab,0)+lag(MSlab,1)+lag(MSlab,2)+lag(MSlab,3)+lag(MSlab,4)+lag(MSlab,5)+lag(MSlab,6))/7,
+           MScalc_prom = (lag(MScalc,0)+lag(MScalc,1)+lag(MScalc,2)+lag(MScalc,3)+lag(MScalc,4)+lag(MScalc,5)+lag(MScalc,6))/7,
+           MVlab_prom = (lag(MVlab,0)+lag(MVlab,1)+lag(MVlab,2)+lag(MVlab,3)+lag(MVlab,4)+lag(MVlab,5)+lag(MVlab,6))/7,
+           MVlab_prom = MVlab_prom * 100,
+           MSscada_prom = (lag(MSscada1,0)+lag(MSscada1,1)+lag(MSscada1,2)+lag(MSscada1,3)+lag(MSscada1,4)+lag(MSscada1,5)+lag(MSscada1,6))/7
+    )
+  
+  return(.tmp_pre)
+}
+
+return_prom_dig <- function(df_dig, filter=NULL){
+  
+  .tmp_dig <- df_dig %>%
+    mutate(caudal_total = caudal_690 + caudal_anillo + caudal_1690,
+           ms_total = (caudal_690 * ms_690 + caudal_anillo * ms_anillo + caudal_1690 * ms_1690) 
+           / caudal_total,
+           mv_total = (caudal_690 * ms_690 * mv_690 + 
+                         caudal_anillo * ms_anillo * mv_anillo + 
+                         caudal_1690 * ms_1690 * mv_anillo) 
+           / (caudal_total * ms_total)
+           ) %>%
+    mutate(MS_prom = (lag(ms_total,0)+lag(ms_total,1)+lag(ms_total,2)+lag(ms_total,3)+lag(ms_total,4)+lag(ms_total,5)+lag(ms_total,6))/7,
+           MV_prom = (lag(mv_total,0)+lag(mv_total,1)+lag(mv_total,2)+lag(mv_total,3)+lag(mv_total,4)+lag(mv_total,5)+lag(mv_total,6))*100/7
+           )
+  
+  return(.tmp_dig)
+}
+
 
 ######################################################333
 # OJO: Al PARECER NO UTILIZO ESTA FUNCION, BORRAR
