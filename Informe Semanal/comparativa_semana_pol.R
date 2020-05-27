@@ -63,9 +63,13 @@ semana_termino <- 21
 year <- 2020
 
 # Se tabaja con una df temporal para limpiar los datos de los indices de marcha 0
+# OJO!!! CAMBIAR EL DROP_NA YA QUE PUEDE ELIMINAR DATOS DE CARGA REALES
+# CAMBIAR POR UN PROM ULTIMOS DÏAS
 .tmp_esp <- df_espesamiento %>% dplyr::filter(indice == 1) %>% drop_na(sequedad, tasaCaptura)
-.tmp_dh <- df_deshidratacion %>% dplyr::filter(indice == 1) %>% drop_na(sequedad, tasaCaptura)
-
+.tmp_dh <- df_deshidratacion %>% dplyr::filter(indice == 1) %>% 
+  mutate(sequedad = if_else(is.na(sequedad), (lag(sequedad, 1) + lag(sequedad,2) + lag(sequedad, 3))/3, sequedad),
+         tasaCaptura = if_else(is.na(tasaCaptura), (lag(tasaCaptura, 1) + lag(tasaCaptura,2) + lag(tasaCaptura, 3))/3, tasaCaptura)
+         )
 .tmp_stock <- df_pol_stock 
 .tmp_scada <- df_pol_scada 
 .tmp_lab <- df_pol_lab %>% drop_na(concentracion)

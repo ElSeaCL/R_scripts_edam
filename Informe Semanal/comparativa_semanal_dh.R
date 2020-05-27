@@ -83,7 +83,7 @@ source("T:/PROCESOS/18. Seguimientos/Varios/R scripts/temas/tema_impresion.R")
 
 # Semana de la cual se rescatarán los datos
 tipo <- "Deshidratacion"
-semana_inicio <- 20
+semana_inicio <- 8
 semana_termino <- 21
 year <- 2020
 
