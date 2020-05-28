@@ -19,6 +19,35 @@ if (return==1) {
 # FUNCIONES PRIVADAS
 #################################################################################################################
 
+.load_workbook_preesp <- function(x) {
+  # Carga el workbook deseado perteneciente a
+  # "Comparativo pre_esp.xlsx"
+  #
+  # Arguments:
+  #  x: Nombre del libro que se quiere cargar.
+  #
+  # Returns:
+  #  Data Frame con la información obtenida en el libro.
+  if (!exists("wb.pre_esp")) {
+    wb.pre_esp <- 
+      loadWorkbook("T:/PROCESOS/18. Seguimientos/Espesamiento/src/Comparativo pre_esp 2020.xlsx")
+    assign("wb.pre_esp", wb.pre_esp, envir = .GlobalEnv)
+  }
+  
+  if (x %in% names(wb.pre_esp)) {
+    read.xlsx(wb.pre_esp,
+              sheet=x,
+              colNames = TRUE,
+              skipEmptyRows = TRUE,
+              skipEmptyCols= TRUE,
+              detectDates = TRUE
+    )
+  } else {
+    print("Sheet not found")
+  }
+  
+}
+
 .load_workbook_esp <- function(x) {
   # Carga el workbook deseado perteneciente a
   # "Comparativo espesamiento.xlsx"
@@ -219,6 +248,47 @@ if (return==1) {
 #################################################################################################################
 # FUNCIONES PUBLICAS
 #################################################################################################################
+#################################################################################################################
+## PRE-ESPESAMIENTO
+#################################################################################################################
+
+return_df_pre_in <- function() {
+  resultados <- .load_workbook_preesp("pre_esp_ingreso")
+  
+  resultados$SST <- as.numeric(resultados$SST)
+  resultados$MV <- as.numeric(resultados$MV)
+  
+  return(resultados)
+  
+}
+
+return_df_pre_out <- function() {
+  resultados <- .load_workbook_preesp("pre_esp_salida")
+  
+  resultados$indice_marcha <- as.numeric(resultados$indice_marcha)
+  resultados$manto <- as.numeric(resultados$manto)
+  resultados$MS <- as.numeric(resultados$MS)
+  
+  return(resultados)
+  
+}
+
+return_df_pre_sobre <- function() {
+  resultado <- .load_workbook_preesp("pre_esp_sobre")
+  
+  resultado$SST <- as.numeric(resultado$SST)
+  
+  return(resultado)
+}
+
+return_df_cent_in <- function() {
+  resultados <- .load_workbook_preesp("cent_in")
+  resultados$MSscada1 <- as.numeric(resultados$MSscada1)
+  resultados$MSlab <- as.numeric(resultados$MSlab)
+  resultados$MVlab <- as.numeric(resultados$MVlab)
+  return(resultados)
+}
+
 
 #################################################################################################################
 ## ESPESAMIENTO
@@ -276,42 +346,12 @@ return_avisos_esp <- function() {
   return(resultados)
 }
 
-return_df_pre_in <- function() {
-  resultados <- .load_workbook_esp("pre_esp_ingreso")
-  
-  resultados$SST <- as.numeric(resultados$SST)
-  resultados$MV <- as.numeric(resultados$MV)
-  
-  return(resultados)
-  
-}
-
-return_df_pre_out <- function() {
-  resultados <- .load_workbook_esp("pre_esp_salida")
-  
-  resultados$indice_marcha <- as.numeric(resultados$indice_marcha)
-  resultados$manto <- as.numeric(resultados$manto)
-  resultados$MS <- as.numeric(resultados$MS)
-  
-  return(resultados)
-  
-}
-
-return_df_cent_in <- function() {
-  resultados <- .load_workbook_esp("cent_in")
-  resultados$MSscada1 <- as.numeric(resultados$MSscada1)
-  resultados$MSlab <- as.numeric(resultados$MSlab)
-  resultados$MVlab <- as.numeric(resultados$MVlab)
-  return(resultados)
-}
-
 return_df_cambi <- function() {
   resultados <- .load_workbook_esp("cambi_prod")
-  
+
   resultados$ciclos <- as.numeric(resultados$ciclos)
   
   return(resultados)
-  
 }
 
 #################################################################################################################
