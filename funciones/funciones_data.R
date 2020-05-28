@@ -253,21 +253,35 @@ if (return==1) {
 #################################################################################################################
 
 return_df_pre_in <- function() {
+  
   resultados <- .load_workbook_preesp("pre_esp_ingreso")
   
-  resultados$SST <- as.numeric(resultados$SST)
+  resultados$MS <- as.numeric(resultados$MS)
   resultados$MV <- as.numeric(resultados$MV)
   
   return(resultados)
   
 }
 
-return_df_pre_out <- function() {
+return_df_pre_out <- function(fix.missing.MS) {
+  
   resultados <- .load_workbook_preesp("pre_esp_salida")
   
   resultados$indice_marcha <- as.numeric(resultados$indice_marcha)
   resultados$manto <- as.numeric(resultados$manto)
   resultados$MS <- as.numeric(resultados$MS)
+  
+  resultados <- resultados %>%
+    filter(indice_marcha == 1)
+  
+  if (fix.missing.MS == TRUE) {
+
+    df_fix <- .load_workbook_preesp("cent_in")
+    
+    resultados <- inner_join(resultados, df_fix) %>%
+      mutate(MS = if_else(is.na(MS), MSlab, MS)) %>%
+      select("fecha", "indice_marcha", "pre-espesador", "manto", "caudal", "MS")
+  }
   
   return(resultados)
   
@@ -676,6 +690,62 @@ return_prom_dig <- function(df_dig, filter=NULL){
   return(.tmp_dig)
 }
 
+return_carga_pre <- function(df_pre, fech_in, fecha_out, intervalo) {
+  
+  .tmp_df <- df_pre %>%
+    mutate(caudal = if_else(is.na(caudal), (lag(caudal,1)+lag(caudal,2)+lag(caudal,3))/3, caudal),
+           MS = if_else(is.na(MS), (lag(MS,1)+lag(MS,2)+lag(MS,3))/3, MS)) %>%
+    mutate(carga = caudal * MS / 1000) %>%
+    group_by(fecha) %>%
+    summarise(carga = sum(carga)) %>%
+    ungroup(fecha) %>%
+    filter(fecha >= fecha_in,
+           fecha <= fecha_out)
+  
+  if (intervalo == "Diario") {
+    
+    .tmp_df <- .tmp_df %>%
+      mutate(carga_prom = (lag(carga,0) + lag(carga,1) + lag(carga,2) + lag(carga,3) +
+                                lag(carga,4) + lag(carga,5) + lag(carga,6))/7) 
+    
+    return(.tmp_df)
+    
+  } else if (intervalo == "Semanal") {
+    
+    .tmp_df <- .tmp_df %>% 
+      mutate(semana = factor(lubridate::isoweek(fecha),ordered = TRUE),
+             ano = factor(lubridate::year(fecha), ordered = TRUE)
+      ) %>%
+      group_by(ano, semana) %>%
+      summarise(carga_tot = sum(carga)) %>%
+      ungroup(ano, semana) %>%
+      mutate(ano_sem = factor(stringr::str_c(ano,semana,sep="_"), ordered = TRUE),
+             ano_sem = factor(ano_sem, levels = ano_sem)
+      )
+    
+    return(.tmp_df)
+    
+  } else if (intervalo == "Mensual") {
+    
+    .tmp_df <- .tmp_df %>%
+      mutate(mes = factor(lubridate::month(fecha),ordered = TRUE),
+             ano = factor(lubridate::year(fecha), ordered = TRUE)
+      ) %>%
+      group_by(ano, mes) %>%
+      summarise(carga_tot = sum(carga)) %>%
+      ungroup(ano, mes) %>%
+      mutate(ano_mes = factor(stringr::str_c(ano,mes,sep="_"), ordered = TRUE),
+             ano_mes = factor(ano_mes, levels = ano_mes)
+      )
+    
+    return(.tmp_df)
+    
+  } else {
+    
+    print("Opcion no valida")
+    
+  }
+}
 
 ######################################################333
 # OJO: Al PARECER NO UTILIZO ESTA FUNCION, BORRAR

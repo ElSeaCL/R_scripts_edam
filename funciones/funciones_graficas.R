@@ -140,6 +140,95 @@ fig_clasificacion_anual <- function(datosResultados, year, semana_inicio,semana_
 }
 
 #################################################################################################################
+# PRE_ESPESADORES
+#################################################################################################################
+
+fig_carga_pre <- function(df_pre, fecha_in, fecha_out, intervalo) {
+  
+  .tmp_df <- return_carga_pre(df_pre, fech_in, fecha_out, intervalo)
+  
+  titulo <- labs(subtitle = intervalo)
+  axis_y <- labs(y="Carga Entrada (ton)")
+  
+  if (intervalo == "Diario") {
+    
+    .tmp_plot <- .tmp_df %>%
+      ggplot() +
+      geom_line(aes(x=fecha, y=carga_prom), color = "Blue") +
+      geom_point(aes(x=fecha, y=carga_in), color = "Red") +
+      labs(x="Fecha") +
+      axis_y +
+      titulo
+    
+    return(.tmp_plot)
+    
+  } else if (intervalo == "Semanal") {
+    
+    .tmp_plot <- .tmp_df %>% 
+      ggplot() +
+      geom_col(aes(x=ano_sem, y=carga_tot), fill = "red4") +
+      labs(x="Semana") +
+      axis_y +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+      titulo
+    
+    return(.tmp_plot)
+    
+  } else if (intervalo == "Mensual") {
+    
+    .tmp_plot <- .tmp_df %>%
+      ggplot() +
+      geom_col(aes(x=ano_mes, y=carga_tot), fill="green4") +
+      labs(x="Mes") +
+      axis_y +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+      titulo
+    
+    return(.tmp_plot)
+    
+  } else {
+    
+    print("Opcion no valida")
+    
+  }
+}
+
+fig_dif_carga_pre <- function(df_in, df_out, fecha_in, fecha_out, intervalo, color="red4") {
+  
+  if (intervalo == "Diario") {
+    plot_x <- "fecha"
+    x_lab <- labs(x="Fecha")
+    theme_x <- NULL
+  } else if (intervalo == "Semanal") {
+    plot_x <- "ano_sem"
+    x_lab <- labs(x="Semanal")
+    theme_x <- theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  } else {
+    plot_x <- "ano_mes"
+    x_lab <- labs(x="Mes")
+    theme_x <- theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  }
+  
+  carga_dif <- "carga_dif"
+  
+  y_axis <- labs(y="Carga (ton)")
+  subtitle <- labs(subtitle = intervalo)
+  
+  .tmp_in <- return_carga_pre(.tmp_pre_in, fech_in, fecha_out, intervalo)
+  .tmp_out <- return_carga_pre(.tmp_pre_out, fech_in, fecha_out, intervalo)
+  
+  inner_join(.tmp_in, .tmp_out, by = plot_x) %>%
+    mutate(carga_in = carga_tot.x,
+           carga_out = carga_tot.y,
+           carga_dif = carga_in - carga_out) %>%
+    ggplot() +
+    geom_bar(aes_string(x=plot_x, y=carga_dif), fill=color, stat="identity") +
+    x_lab + theme_x + y_axis + subtitle
+  
+}
+
+
+#################################################################################################################
 # SERIES TIEMPO ENTRADA CENTRIFUGAS
 #################################################################################################################
 
