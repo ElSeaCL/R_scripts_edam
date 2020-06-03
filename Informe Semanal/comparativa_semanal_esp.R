@@ -81,8 +81,8 @@ source("T:/PROCESOS/18. Seguimientos/Varios/R scripts/temas/tema_impresion.R")
 
 # Semana de la cual se rescatarán los datos
 tipo <- "Espesamiento"
-semana_inicio <- 20
-semana_termino <- 21
+semana_inicio <- 22
+semana_termino <- 22
 year <- 2020
 
 # Lista de centrífugas a graficar

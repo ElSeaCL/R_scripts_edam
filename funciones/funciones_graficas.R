@@ -389,6 +389,7 @@ fig_prom_dig <- function(dfCentrifuga, atributo, year, week_inicio, week_termino
   
   .tmp_plot <- ggplot(.tmp_df) +
     geom_line(aes_string(x=fecha, y= atributo1, color=Blue), size=1) +
+    scale_color_manual(name = "Origen", values = c("Blue" = "Blue"), labels = c("Lab")) +
     scale_y_continuous(limits = limits_y) +
     labs(x="Fecha", y="Concentraci\u00F3n (kg/ton)") +
     labs(title = "Concentraci\u00F3n Lodo Digerido a Centr\u00EDfugas") +

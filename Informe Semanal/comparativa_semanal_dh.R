@@ -83,8 +83,8 @@ source("T:/PROCESOS/18. Seguimientos/Varios/R scripts/temas/tema_impresion.R")
 
 # Semana de la cual se rescatarán los datos
 tipo <- "Deshidratacion"
-semana_inicio <- 8
-semana_termino <- 21
+semana_inicio <-22
+semana_termino <- 22
 year <- 2020
 
 # Lista de centrífugas a graficar
@@ -146,7 +146,19 @@ for (semana in semana_inicio:semana_termino) {
   
   .tmp_dig <- return_prom_dig(df_dig)
   
-  # figuras de ratio, sequedad y tasa de captura
+  return_prom_dig <- function(df_dig, filter=NULL){
+    
+    .tmp_dig <- df_dig %>%
+      mutate(MS_prom = (lag(concMS,0)+lag(concMS,1)+lag(concMS,2)+lag(concMS,3)+lag(concMS,4)+lag(concMS,5)+lag(concMS,6))/7,
+             MV_prom = (lag(concMV,0)+lag(concMV,1)+lag(concMV,2)+lag(concMV,3)+lag(concMV,4)+lag(concMV,5)+lag(concMV,6))*100/7
+      )
+    
+    return(.tmp_dig)
+  }
+  
+  .tmp_dig <- return_prom_dig(.tmp_data)
+  
+  # figuras de entrada lodo
   temp_plot <- fig_prom_dig(.tmp_dig, "MS", year, .tmp_semana_inicio, semana)
   ggsave(temp_plot,file=paste(c("MS.png"), sep = "", collapse = ""),
          width = 15, height = 7.0, units = "cm", dpi=320)
@@ -271,4 +283,4 @@ for (semana in semana_inicio:semana_termino) {
 # Se graba el excel con los datos
 setwd("T:/PROCESOS/18. Seguimientos/Deshidratacion/src")
 openxlsx::writeData(wb.resultados.deshidratacion, "Resultados", df_clasif_dh)
-openxlsx::saveWorkbook(wb.resultados.deshidratacion, "categoria_resultados_esp.xlsx", overwrite = TRUE)
+openxlsx::saveWorkbook(wb.resultados.deshidratacion, "categoria_resultados_dh.xlsx", overwrite = TRUE)

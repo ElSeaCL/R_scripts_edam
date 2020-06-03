@@ -58,8 +58,8 @@ rm("wb.espesamiento")
 #################################################################################################################
 
 # Semana de la cual se rescatarán los datos
-semana_inicio <- 20
-semana_termino <- 21
+semana_inicio <- 21
+semana_termino <- 22
 year <- 2020
 
 # Se tabaja con una df temporal para limpiar los datos de los indices de marcha 0
