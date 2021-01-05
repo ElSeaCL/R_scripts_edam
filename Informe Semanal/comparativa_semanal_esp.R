@@ -6,16 +6,16 @@
 
 #################################################################################################################
 # TODO
-#################################################################################################################
-
+################################################################################################################
 # 1.- Separar la creación de figuras de la actualización del excel de clasificación.
 
 setwd("T:/PROCESOS/18. Seguimientos/Espesamiento/Comparativa Espesamiento/semanal")
+rm(list=ls())
 
 #################################################################################################################
 # LIBRERIAS USUARIO
 #################################################################################################################
-
+  
 #Funciones básicas
 source("T:/PROCESOS/18. Seguimientos/Varios/R scripts/funciones/funciones_generales.R")
 source("T:/PROCESOS/18. Seguimientos/Varios/R scripts/funciones/funciones_graficas.R")
@@ -32,6 +32,7 @@ cargar_librerias("stringr"    # Manipulación de strings
                 ,"lubridate"  # Herramientas de fecha y hora
                 ,"tidyr"      # Organizador de data tabular
                 ,"openxlsx"   # Manipulación de excel
+                ,"RColorBrewer"
                 )
 
 rm(cargar_librerias)
@@ -43,7 +44,7 @@ rm(cargar_librerias)
 # Se retiran las funciones que no se utilizaran
 rm("return_df_dh", "return_clasificacion_dh")
 
-df_espesamiento <- return_df_esp()
+df_espesamiento <- return_df_esp(horas_imput=TRUE)
 df_clasif_esp <- return_clasificacion_esp()
 df_avisos_esp <- return_avisos_esp()
 df_pre_in <- return_df_pre_in()
@@ -81,8 +82,8 @@ source("T:/PROCESOS/18. Seguimientos/Varios/R scripts/temas/tema_impresion.R")
 
 # Semana de la cual se rescatarán los datos
 tipo <- "Espesamiento"
-semana_inicio <- 22
-semana_termino <- 22
+semana_inicio <- 45
+semana_termino <- 53
 year <- 2020
 
 # Lista de centrífugas a graficar
@@ -145,13 +146,13 @@ for (semana in semana_inicio:semana_termino) {
   .tmp_prom <- return_prom_pre(df_cent_in)
   
   # figura comparativa de MS
-  temp_plot <- fig_prom_in(.tmp_prom, "MS", year, .tmp_semana_inicio, semana_termino)
+  temp_plot <- fig_prom_in(.tmp_prom, "MS", c(year, year), scada = TRUE, .tmp_semana_inicio, semana_termino)
   ggsave(temp_plot,file=paste(c("MS.png"), sep = "", collapse = ""),
          width = 15, height = 7, units = "cm", dpi=320)
   rm(temp_plot)
   
   # Evolución del MV
-  temp_plot <- fig_prom_in(.tmp_prom, "MV", year, .tmp_semana_inicio, semana_termino)
+  temp_plot <- fig_prom_in(.tmp_prom, "MV", c(year, year), scada = FALSE, .tmp_semana_inicio, semana_termino)
   ggsave(temp_plot,file=paste(c("MV.png"), sep = "", collapse = ""),
          width = 15, height = 7, units = "cm", dpi=320)
   rm(temp_plot)
@@ -161,22 +162,23 @@ for (semana in semana_inicio:semana_termino) {
   #################################################################################################################
   
   # Base con los promedios calculados
-  .tmp_prom <- return_prom_movil(.tmp_esp, filter="CAMBI")
+  .tmp_prom <- return_prom_movil(.tmp_esp, filter="CAMBI", group_pol = TRUE)
   
   # figuras de ratio, sequedad y tasa de captura
-  temp_plot <- fig_prom_movil(.tmp_prom, "ratio", year, .tmp_semana_inicio, semana_termino)
+  temp_plot <- fig_prom_movil(.tmp_prom, "ratio", year, .tmp_semana_inicio, semana_termino, show_pol = TRUE)
   ggsave(temp_plot,file=paste(c("ratio.png"), sep = "", collapse = ""),
-         width = 15, height = 7, units = "cm", dpi=320)
+         width = 15, height = 7.0, units = "cm", dpi=320)
   rm(temp_plot)
   
-  temp_plot <- fig_prom_movil(.tmp_prom, "sequedad", year, .tmp_semana_inicio, semana_termino)
+  temp_plot <- fig_prom_movil(.tmp_prom, "sequedad", year, .tmp_semana_inicio, semana_termino, show_pol = TRUE)
   ggsave(temp_plot,file=paste(c("sequedad.png"), sep = "", collapse = ""),
          width = 15, height = 7, units = "cm", dpi=320)
   rm(temp_plot)
   
-  temp_plot <- fig_prom_movil(.tmp_prom, "Tasa de Captura", year, .tmp_semana_inicio, semana_termino)
+  temp_plot <- fig_prom_movil(.tmp_prom, "Tasa de Captura", year, .tmp_semana_inicio, semana_termino, show_pol = TRUE)
   ggsave(temp_plot,file=paste(c("tasa_captura.png"), sep = "", collapse = ""),
          width = 15, height = 7, units = "cm", dpi=320)
+  
   rm(temp_plot)
   rm(.tmp_prom)
   
@@ -203,7 +205,7 @@ for (semana in semana_inicio:semana_termino) {
   #################################################################################################################
   
   # vr vs. torque
-  .tmp_plot <- fig_operacion_cent(.tmp_esp, year, semana, "CAMBI")
+  .tmp_plot <- fig_operacion_cent(.tmp_esp, year, semana, "CAMBI", filter=TRUE)
   # Se comprueba si se encontraron datos de vr vs. torque, de no se así se salta el guardado
   if (!(is.na(class(.tmp_plot)[2]))){
     ggsave(.tmp_plot, file=paste0("operación_semana",semana, ".png"), 

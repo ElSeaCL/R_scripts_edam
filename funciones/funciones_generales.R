@@ -85,7 +85,7 @@ obtener_rangos <- function(str){
   #' `obtener_rangos` retorna los rangos de operación de sequedad y tasa de
   #' captura para los distintos casos de operación de las centrifugas.
   #' 
-  #' Esta función retorna una lista de 4 números, cada unp representa
+  #' Esta función retorna una lista de 4 números, cada uno representa
   #' un límite de operación establecido previamente para las centrífugas.
   #' Los primeros dos elementos corresponde a los mínimo y máximo de sequedad,
   #' mientras que los dos ultimos son los límites de tasa de captura.

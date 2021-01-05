@@ -245,6 +245,65 @@ if (return==1) {
   }
 }
 
+.load_niveles_dh <- function(x) {
+  # Carga el workbook deseado perteneciente a
+  # "categoria_resultados.xlsx"
+  #
+  # Arguments:
+  #  x: Nombre del libro que se quiere cargar.
+  #
+  # Returns:
+  #  Data Frame con la información obtenida en el libro.
+  if (!exists("wb.niveles")) {
+    wb.niveles <- 
+      loadWorkbook("T:/PROCESOS/18. Seguimientos/Deshidratacion/src/niveles_estanques.xlsx")
+    assign("wb.niveles", wb.niveles, envir = .GlobalEnv)
+  }
+  
+  if (x %in% names(wb.niveles)) {
+    read.xlsx(wb.niveles,
+              sheet=x,
+              colNames = TRUE,
+              skipEmptyRows = TRUE,
+              skipEmptyCols= TRUE,
+              detectDates = TRUE
+    )
+  } else {
+    print("Sheet not found")
+  }
+}
+
+.load_camiones_dh <- function(x) {
+  # Carga el workbook deseado perteneciente a
+  # "categoria_resultados.xlsx"
+  #
+  # Arguments:
+  #  x: Nombre del libro que se quiere cargar.
+  #
+  # Returns:
+  #  Data Frame con la información obtenida en el libro.
+  if (!exists("wb.camiones")) {
+    wb.camiones <- 
+      loadWorkbook("T:/PROCESOS/18. Seguimientos/Deshidratacion/src/camiones.xlsx")
+    assign("wb.camiones", wb.camiones, envir = .GlobalEnv)
+  }
+  
+  if (x %in% names(wb.camiones)) {
+    read.xlsx(wb.camiones,
+              sheet=x,
+              colNames = TRUE,
+              skipEmptyRows = TRUE,
+              skipEmptyCols= TRUE,
+              detectDates = TRUE
+    )
+  } else {
+    print("Sheet not found")
+  }
+}
+
+
+
+
 #################################################################################################################
 # FUNCIONES PUBLICAS
 #################################################################################################################
@@ -258,12 +317,15 @@ return_df_pre_in <- function() {
   
   resultados$MS <- as.numeric(resultados$MS)
   resultados$MV <- as.numeric(resultados$MV)
+  resultados$IVL <- as.numeric(resultados$IVL)
+  resultados$edad_lodo <- as.numeric(resultados$edad_lodo)
+  resultados$TRH <- as.numeric(resultados$TRH)
   
   return(resultados)
   
 }
 
-return_df_pre_out <- function(fix.missing.MS) {
+return_df_pre_out <- function(fix.missing.MS = FALSE) {
   
   resultados <- .load_workbook_preesp("pre_esp_salida")
   
@@ -303,12 +365,21 @@ return_df_cent_in <- function() {
   return(resultados)
 }
 
-
 #################################################################################################################
 ## ESPESAMIENTO
 #################################################################################################################
 
-return_df_esp <- function() {
+return_df_mesas <- function(){
+  resultados <- .load_workbook_esp("mesas")
+  resultados$caudalLodo <- as.numeric(resultados$caudalLodo)
+  resultados$flujoMS <- as.numeric(resultados$flujoMS)
+  resultados$ratio <- as.numeric(resultados$ratio)
+  resultados$sequedad <- as.numeric(resultados$sequedad)
+  resultados$tasaCaptura <- as.numeric(resultados$tasaCaptura)
+  return(resultados)
+}
+
+return_df_esp <- function(horas_imput=FALSE, missing_sample_input = FALSE) {
   # Carga el worksheet "centrifugas" perteneciente a
   # "Comparativo espesamiento.xlsx"
   #
@@ -325,12 +396,57 @@ return_df_esp <- function() {
   
   centrifugas <- centrifugas[,1:23]
   
+  centrifugas <- centrifugas %>% filter(indice == 1)
+  
   for (i in c(6:7, 9:13, 16:23)) {
     
     if (is.character(centrifugas[,i])) {
       centrifugas[, i] <- as.numeric(centrifugas[,i])
     }
   }
+  
+  if (missing_sample_input == TRUE) {
+    for (i in 1:nrow(centrifugas)) {
+      if (is.na(centrifugas$sequedad[i])) {
+        fecha = centrifugas$fecha[i]
+        centrifugas$sequedad[i] <- mean(centrifugas$sequedad[which(centrifugas$fecha == fecha)], na.rm = TRUE)
+      }
+      if (is.na(centrifugas$tasaCaptura[i])) {
+        fecha = centrifugas$fecha[i]
+        centrifugas$tasaCaptura[i] <- mean(centrifugas$tasaCaptura[which(centrifugas$fecha == fecha)], na.rm = TRUE)
+      }
+    }
+  }
+  
+  if (horas_imput == TRUE) {
+    
+    # Se reemplazan las horas que dan cargas imposibles, considerado una carga imposible para 
+    # espesamiento un valor mayor a 1500.
+    centrifugas <- centrifugas %>%
+      mutate(carga.h = flujoMS/horas) %>%
+      mutate(horas = replace(horas, carga.h >= 2000, NA))
+    
+    # Se crea una df para generar el modelo
+    filterd_cent <- centrifugas %>%
+      filter(indice == 1,
+             horas > 0,
+             horas <= 24,
+             !is.na(horas),
+             !is.na(caudalLodo)
+             )
+    
+    # Genreacipon del modelo lineal
+    modelo_horas <- lm(horas ~ caudalLodo, filterd_cent)
+    inter <- as.numeric(modelo_horas$coefficients[1])
+    beta <- as.numeric(modelo_horas$coefficients[2])
+    
+    # Se reemplazan los resultados
+    centrifugas <- centrifugas %>%
+      mutate(horas = if_else(is.na(horas), inter + beta*caudalLodo, horas),
+             horas = if_else(horas > 24, inter + beta*caudalLodo, horas),
+             horas = if_else(horas == 0 & indice != 0, inter + beta*caudalLodo, horas),
+             horas = if_else(horas > 24, 24, horas))
+  }  
   
   return(centrifugas)
 }
@@ -349,7 +465,7 @@ return_clasificacion_esp <- function() {
   resultados$ano <- as.numeric(resultados$ano)
   resultados$semana <- as.numeric(resultados$semana)
   resultados$centrifuga <- as.character(resultados$centrifuga)
-  resultados$resultado <- as.character(resultados$resultado)
+  resultados$resultado <- as.factor(resultados$resultado)
   resultados$total <- as.numeric(resultados$total)
   
   return(resultados)
@@ -372,7 +488,7 @@ return_df_cambi <- function() {
 ## DESHIDRATACIÓN
 #################################################################################################################
 
-return_df_dh <- function() {
+return_df_dh <- function(horas_imput=FALSE, missing_sample_input = FALSE) {
   # Carga el worksheet "deseado"centrifugas" perteneciente a
   # "Comparativo deshidratacion.xlsx"
   #
@@ -398,6 +514,49 @@ return_df_dh <- function() {
       centrifugas[, i] <- as.numeric(centrifugas[,i])
     }
   }
+  
+  if (missing_sample_input == TRUE) {
+    for (i in 1:nrow(centrifugas)) {
+      if (is.na(centrifugas$sequedad[i])) {
+        fecha = centrifugas$fecha[i]
+        centrifugas$sequedad[i] <- mean(centrifugas$sequedad[which(centrifugas$fecha == fecha)], na.rm = TRUE)
+      }
+      if (is.na(centrifugas$tasaCaptura[i])) {
+        fecha = centrifugas$fecha[i]
+        centrifugas$tasaCaptura[i] <- mean(centrifugas$tasaCaptura[which(centrifugas$fecha == fecha)], na.rm = TRUE)
+      }
+    }
+  }
+  
+  
+  
+  if (horas_imput == TRUE) {
+    # Se reemplazan las horas que dan cargas imposibles, considerado una carga imposible para 
+    # espesamiento un valor mayor a 1500.
+    centrifugas <- centrifugas %>%
+      mutate(carga.h = flujoMS/horas) %>%
+      mutate(horas = replace(horas, carga.h >= 2000, NA))
+    
+    # Se crea una df para generar el modelo
+    filterd_cent <- centrifugas %>%
+      filter(indice == 1,
+             horas > 0,
+             horas <= 24,
+             !is.na(horas),
+             !is.na(caudalLodo)
+      )
+    
+    # Genreacipon del modelo lineal
+    modelo_horas <- lm(horas ~ caudalLodo, filterd_cent)
+    inter <- as.numeric(modelo_horas$coefficients[1])
+    beta <- as.numeric(modelo_horas$coefficients[2])
+    
+    centrifugas <- centrifugas %>%
+      mutate(horas = if_else(is.na(horas), inter + beta*caudalLodo, horas),
+             horas = if_else(horas > 24, inter + beta*caudalLodo, horas),
+             horas = if_else(horas == 0 & indice != 0, inter + beta*caudalLodo, horas),
+             horas = if_else(horas > 24, 24, horas))
+  }  
   
   return(centrifugas)
 }
@@ -436,7 +595,7 @@ return_clasificacion_dh <- function() {
   resultados$ano <- as.numeric(resultados$ano)
   resultados$semana <- as.numeric(resultados$semana)
   resultados$centrifuga <- as.character(resultados$centrifuga)
-  resultados$resultado <- as.character(resultados$resultado)
+  resultados$resultado <- as.factor(resultados$resultado)
   resultados$total <- as.numeric(resultados$total)
   
   return(resultados)
@@ -446,6 +605,66 @@ return_avisos_dh <- function() {
   resultados <- .load_avisos_dh("avisos")
   return(resultados)
 }
+
+return_cent_comp <- function() {
+  resultados <- .load_workbook_dh("centrado.1660")
+  
+  resultados$sst <- as.numeric(resultados$sst)
+  
+  return(resultados)
+}
+
+return_cent_sop <- function() {
+  resultados <- .load_workbook_dh("centrado.soporte")
+  
+  resultados$sst <- as.numeric(resultados$sst)
+  
+  return(resultados)
+}
+
+return_eld <- function() {
+  resultados <- .load_niveles_dh("eld")
+  names(resultados) <- c("fecha", "eld1.m", "eld1.p", "eld2.m", "eld2.p", "eld3")
+  
+  resultados$eld1.m <- as.numeric(resultados$eld1.m)
+  resultados$eld1.p <- as.numeric(resultados$eld1.p)
+  resultados$eld2.m <- as.numeric(resultados$eld2.m)
+  resultados$eld2.p <- as.numeric(resultados$eld2.p)
+  resultados$eld3 <- as.numeric(resultados$eld3)
+  
+  
+  return(resultados)
+}
+
+
+return_silos <- function() {
+  resultados <- .load_niveles_dh("silos")
+  names(resultados) <- c("fecha", "silo.a", "silo.b", "silo.c", "silo.d")
+  
+  resultados$silo.a <- as.numeric(resultados$silo.a)
+  resultados$silo.b <- as.numeric(resultados$silo.b)
+  resultados$silo.c <- as.numeric(resultados$silo.c)
+  resultados$silo.d <- as.numeric(resultados$silo.d)
+  
+  # Se imputan los datos faltantes
+  resultados <- resultados %>%
+    mutate(silo.a = if_else(is.na(silo.a), lag(silo.a, 1), silo.a)
+           ,silo.b = if_else(is.na(silo.b), lag(silo.b, 1), silo.b)
+           ,silo.c = if_else(is.na(silo.c), lag(silo.c, 1), silo.c)
+           ,silo.d = if_else(is.na(silo.d), lag(silo.d, 1), silo.d)
+           )
+  
+  return(resultados)
+}
+
+return_camiones <- function(){
+  resultados <- .load_camiones_dh("transporte")
+  
+  return(resultados)
+}
+
+
+
 
 #################################################################################################################
 ## POLIMERO
@@ -525,8 +744,8 @@ return_comp_pol <- function(df_scada, df_lab) {
            concentracion = if_else(is.na(concentracion), lag(concentracion, 1), concentracion)) %>%
     group_by(unidad) %>%
     mutate(conc_mov_scada = (lag(concentracion,0)+lag(concentracion,1)+lag(concentracion,2)+lag(concentracion,3)+lag(concentracion,4)+lag(concentracion,5)+lag(concentracion,6))/7
-    ) %>%
-    ungroup(unidad)
+    ) #%>%
+    #ungroup(unidad)
   
   .tmp_prom_lab <- df_lab %>%
     group_by(fecha, unidad) %>%
@@ -536,8 +755,8 @@ return_comp_pol <- function(df_scada, df_lab) {
     ungroup(fecha, unidad) %>%
     group_by(unidad) %>%
     mutate(conc_mov_lab = (lag(conc_mean,0)+lag(conc_mean,1)+lag(conc_mean,2)+lag(conc_mean,3)+lag(conc_mean,4)+lag(conc_mean,5)+lag(conc_mean,6))/7
-    ) %>%
-    ungroup(unidad)
+    ) #%>%
+    #ungroup(unidad)
   
   .tmp_final <- inner_join(.tmp_prom_scada, .tmp_prom_lab) %>%
     select(fecha, unidad, conc_mov_scada, conc_mean) %>%
@@ -550,7 +769,7 @@ return_comp_pol <- function(df_scada, df_lab) {
   return(.tmp_final)
 }
 
-return_stock_dia <- function(dfStock, proc, year){
+return_stock_dia <- function(dfStock, proc, year=NA){
   
   .tmp_stock_dia <- dfStock %>%
     filter(proceso == proc) %>%
@@ -561,11 +780,17 @@ return_stock_dia <- function(dfStock, proc, year){
               rango_fecha = mean(rango_fecha)) %>%
     mutate(mes = month(fecha_inicio),
            dia_mes = day(fecha_inicio)) %>%
+    ungroup(fecha_inicio) %>%
     group_by(mes) %>%
     mutate(consumo_rango = if_else(dia_mes == 1, consumo, lag(consumo, 0) - lag(consumo, 1)),
            consumo_dia = consumo_rango / rango_fecha) %>%
-    filter(year(fecha_inicio) == year) %>%
+    #filter(year(fecha_inicio) == year) %>%
     ungroup(mes)
+  
+  if (!is.na(year)){
+    .tmp_stock_dia <- .tmp_stock_dia %>%
+      filter(year(fecha_inicio) == year)
+  }
   
   return(.tmp_stock_dia)
   
@@ -634,24 +859,56 @@ add_resultados <- function(df_resultados, resultados, year, week, cent) {
   return(df_resultados)
 }
 
-return_prom_movil <- function(dfCentrifugas, filter=NULL){
+return_prom_movil <- function(dfCentrifugas, filter=NULL, group_pol=FALSE){
   
   filter <- stringi::stri_trans_general(filter, id="Latin-ASCII")
   
   .tmp_esp_st <- dfCentrifugas %>%
-    filter(direccion == filter) %>%
-    mutate(ratio_lodo = ratio * flujoMS,
+    dplyr::filter(direccion == filter) %>%
+    dplyr::mutate(ratio_lodo = ratio * flujoMS,
            seq_lodo = sequedad * flujoMS,
-           tc_lodo = tasaCaptura * flujoMS) %>%
-    group_by(fecha) %>%
-    summarise(ratio_mean = sum(ratio_lodo) / sum(flujoMS),
-              seq_mean = sum(seq_lodo) / sum(flujoMS),
-              tc_mean = sum(tc_lodo) / sum(flujoMS),
-              ratio_sd = sd(ratio),
-              seq_sd = sd(sequedad),
-              tc_sd = sd(tasaCaptura)) %>%
-    ungroup(fecha) %>%
-    mutate(ratio_prom = (lag(ratio_mean,0)+lag(ratio_mean,1)+lag(ratio_mean,2)+lag(ratio_mean,3)+lag(ratio_mean,4)+lag(ratio_mean,5)+lag(ratio_mean,6))/7,
+           tc_lodo = tasaCaptura * flujoMS)
+  
+  if (group_pol){
+    .tmp_esp_st <- .tmp_esp_st %>%
+      dplyr::group_by(fecha, polimero) %>%
+      summarise(ratio_lodo = sum(ratio_lodo),
+                flujoMS = sum(flujoMS),
+                seq_lodo = sum(seq_lodo),
+                tc_lodo = sum(tc_lodo),
+                ratio_mean = ratio_lodo / flujoMS,
+                seq_mean = seq_lodo / flujoMS,
+                tc_mean = tc_lodo / flujoMS,
+                ratio_sd = sd(ratio),
+                seq_sd = sd(sequedad),
+                tc_sd = sd(tasaCaptura))
+    
+    .tmp_esp_st <- .tmp_esp_st %>%
+      summarise(ratio_lodo = sum(ratio_lodo),
+                flujoMS = sum(flujoMS),
+                seq_lodo = sum(seq_lodo),
+                tc_lodo = sum(tc_lodo),
+                ratio_mean = ratio_lodo / flujoMS,
+                seq_mean = seq_lodo / flujoMS,
+                tc_mean = tc_lodo / flujoMS,
+                polimero = paste(polimero, collapse = "-"))
+  } else {
+    .tmp_esp_st <- .tmp_esp_st %>%
+      dplyr::group_by(fecha) %>%
+      summarise(ratio_lodo = sum(ratio_lodo),
+                flujoMS = sum(flujoMS),
+                seq_lodo = sum(seq_lodo),
+                tc_lodo = sum(tc_lodo),
+                ratio_mean = ratio_lodo / flujoMS,
+                seq_mean = seq_lodo / flujoMS,
+                tc_mean = tc_lodo / flujoMS,
+                ratio_sd = sd(ratio),
+                seq_sd = sd(sequedad),
+                tc_sd = sd(tasaCaptura))
+  }
+  
+  .tmp_esp_st <- .tmp_esp_st %>%
+    dplyr::mutate(ratio_prom = (lag(ratio_mean,0)+lag(ratio_mean,1)+lag(ratio_mean,2)+lag(ratio_mean,3)+lag(ratio_mean,4)+lag(ratio_mean,5)+lag(ratio_mean,6))/7,
            seq_prom = (lag(seq_mean,0)+lag(seq_mean,1)+lag(seq_mean,2)+lag(seq_mean,3)+lag(seq_mean,4)+lag(seq_mean,5)+lag(seq_mean,6))/7,
            tc_prom = (lag(tc_mean,0)+lag(tc_mean,1)+lag(tc_mean,2)+lag(tc_mean,3)+lag(tc_mean,4)+lag(tc_mean,5)+lag(tc_mean,6))/7
     )
@@ -698,7 +955,7 @@ return_carga_pre <- function(df_pre, fech_in, fecha_out, intervalo) {
     mutate(carga = caudal * MS / 1000) %>%
     group_by(fecha) %>%
     summarise(carga = sum(carga)) %>%
-    ungroup(fecha) %>%
+    #ungroup(fecha) %>%
     filter(fecha >= fecha_in,
            fecha <= fecha_out)
   
@@ -745,6 +1002,24 @@ return_carga_pre <- function(df_pre, fech_in, fecha_out, intervalo) {
     print("Opcion no valida")
     
   }
+}
+
+t_col <- function(color, percent = 50, name = NULL) {
+  #      color = color name
+  #    percent = % transparency
+  #       name = an optional name for the color
+  
+  ## Get RGB values for named color
+  rgb.val <- col2rgb(color)
+  
+  ## Make new color using input color as base and alpha set by transparency
+  t.col <- rgb(rgb.val[1], rgb.val[2], rgb.val[3],
+               max = 255,
+               alpha = (100 - percent) * 255 / 100,
+               names = name)
+  
+  ## Save the color
+  invisible(t.col)
 }
 
 ######################################################333

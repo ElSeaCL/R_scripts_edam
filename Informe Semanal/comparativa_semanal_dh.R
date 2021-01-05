@@ -1,9 +1,9 @@
 #################################################################################################################
-# SCRIPT FIGURAS ESPESAMIENTO
+# SCRIPT FIGURAS DESHIDRATACIÓN
 # Por: Sebastián Gonzalez
 # 17-02-2020
 #################################################################################################################
-
+rm(list = ls())
 #################################################################################################################
 # TODO
 #################################################################################################################
@@ -33,7 +33,8 @@ cargar_librerias("stringr"    # Manipulación de strings
                  ,"tidyr"      # Organizador de data tabular
                  ,"openxlsx"   # Manipulación de excel
                  ,"stringi"    # quita los acentos
-                 )
+                 ,"RColorBrewer"
+)
 
 rm(cargar_librerias)
 
@@ -48,7 +49,7 @@ rm("return_df_esp",
    "return_df_pre_in", 
    "return_df_pre_out")
 
-df_deshidratacion <- return_df_dh()
+df_deshidratacion <- return_df_dh(horas_imput=TRUE)
 df_clasif_dh <- return_clasificacion_dh()
 df_avisos_dh <- return_avisos_dh()
 df_dig <- return_df_dig()
@@ -83,8 +84,8 @@ source("T:/PROCESOS/18. Seguimientos/Varios/R scripts/temas/tema_impresion.R")
 
 # Semana de la cual se rescatarán los datos
 tipo <- "Deshidratacion"
-semana_inicio <-22
-semana_termino <- 22
+semana_inicio <- 45
+semana_termino <- 49
 year <- 2020
 
 # Lista de centrífugas a graficar
@@ -144,11 +145,14 @@ for (semana in semana_inicio:semana_termino) {
     .tmp_semana_inicio <- 53 + .tmp_semana_inicio
   }
   
-  .tmp_dig <- return_prom_dig(df_dig)
+  
   
   return_prom_dig <- function(df_dig, filter=NULL){
     
     .tmp_dig <- df_dig %>%
+      group_by(fecha) %>%
+      summarise(concMS = mean(concMS),
+                concMV = mean(concMV)) %>%
       mutate(MS_prom = (lag(concMS,0)+lag(concMS,1)+lag(concMS,2)+lag(concMS,3)+lag(concMS,4)+lag(concMS,5)+lag(concMS,6))/7,
              MV_prom = (lag(concMV,0)+lag(concMV,1)+lag(concMV,2)+lag(concMV,3)+lag(concMV,4)+lag(concMV,5)+lag(concMV,6))*100/7
       )
@@ -158,6 +162,28 @@ for (semana in semana_inicio:semana_termino) {
   
   .tmp_dig <- return_prom_dig(.tmp_data)
   
+  # .tmp_dig <- return_prom_dig(.tmp_data)
+  # .tmp_dig %>%
+  #   filter(fecha >= as.Date("2020-01-01"),
+  #          fecha < as.Date("2020-06-08")) %>%
+  #   mutate(carga_prim_690 = caudal_690 * ms_690 * porc_lp_690,
+  #          carga_sec_690 = caudal_690 * ms_690 * porc_lb_690,
+  #          carga_prim_anillo = caudal_anillo * ms_anillo * porc_lp_anillo,
+  #          carga_hidro_anillo = caudal_anillo * ms_anillo * porc_lh_anillo,
+  #          carga_total = carga_prim_690 + carga_sec_690 + carga_prim_anillo + carga_hidro_anillo,
+  #          prop_lp_690 = carga_prim_690 / carga_total,
+  #          prop_lb_690 = carga_sec_690 / carga_total,
+  #          prop_lp_anillo = carga_prim_anillo / carga_total,
+  #          prop_lh_anillo = carga_hidro_anillo / carga_total
+  #          ) %>%
+  #   ggplot() +
+  #   geom_line(aes(x = fecha, y = prop_lp_690, color = "red"), size = 1) +
+  #   geom_line(aes(x = fecha, y = prop_lb_690, color = "blue"), size = 1) +
+  #   geom_line(aes(x = fecha, y = prop_lp_anillo, color = "brown"), size = 1) +
+  #   geom_line(aes(x = fecha, y = prop_lh_anillo, color = "black"), size = 1) +
+  #   scale_color_manual(values= c("red", "blue", "brown", "black"), 
+  #                      labels = c("LP_690", "LB_690", "LP_anillo", "LH_anillo"))
+  # 
   # figuras de entrada lodo
   temp_plot <- fig_prom_dig(.tmp_dig, "MS", year, .tmp_semana_inicio, semana)
   ggsave(temp_plot,file=paste(c("MS.png"), sep = "", collapse = ""),
@@ -174,20 +200,20 @@ for (semana in semana_inicio:semana_termino) {
   #################################################################################################################
   
   # Base con los promedios calculados
-  .tmp_prom <- return_prom_movil(.tmp_data, filter="Deshidratación")
+  .tmp_prom <- return_prom_movil(.tmp_data, filter="Deshidratación", group_pol = TRUE)
   
   # figuras de ratio, sequedad y tasa de captura
-  temp_plot <- fig_prom_movil(.tmp_prom, "ratio", year, .tmp_semana_inicio, semana)
+  temp_plot <- fig_prom_movil(.tmp_prom, "ratio", year, .tmp_semana_inicio, semana, show_pol = TRUE)
   ggsave(temp_plot,file=paste(c("ratio.png"), sep = "", collapse = ""),
          width = 15, height = 7.0, units = "cm", dpi=320)
   rm(temp_plot)
   
-  temp_plot <- fig_prom_movil(.tmp_prom, "sequedad", year, .tmp_semana_inicio, semana)
+  temp_plot <- fig_prom_movil(.tmp_prom, "sequedad", year, .tmp_semana_inicio, semana, show_pol = TRUE)
   ggsave(temp_plot,file=paste(c("sequedad.png"), sep = "", collapse = ""),
          width = 15, height = 7.0, units = "cm", dpi=320)
   rm(temp_plot)
   
-  temp_plot <- fig_prom_movil(.tmp_prom, "Tasa de Captura", year, .tmp_semana_inicio, semana)
+  temp_plot <- fig_prom_movil(.tmp_prom, "Tasa de Captura", year, .tmp_semana_inicio, semana, show_pol = TRUE)
   ggsave(temp_plot,file=paste(c("tasa_captura.png"), sep = "", collapse = ""),
          width = 15, height = 7.0, units = "cm", dpi=320)
   rm(temp_plot)
@@ -216,7 +242,7 @@ for (semana in semana_inicio:semana_termino) {
   #################################################################################################################
   
   # vr vs. torque
-  .tmp_plot <- fig_operacion_cent(.tmp_data, year, semana, "Deshidratación")
+  .tmp_plot <- fig_operacion_cent(.tmp_data, year, semana, "Deshidratación", filter=TRUE)
     # Se comprueba si se encontraron datos de vr vs. torque, de no se así se salta el guardado
   if (!(is.na(class(.tmp_plot)[2]))){
     ggsave(.tmp_plot, file=paste0("operación_semana",semana, ".png"), 

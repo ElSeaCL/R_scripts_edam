@@ -1,9 +1,9 @@
 #################################################################################################################
-# SCRIPT FIGURAS ESPESAMIENTO
+# SCRIPT FIGURAS POLIMERO
 # Por: Sebastián Gonzalez
 # 17-02-2020
 #################################################################################################################
-
+rm(list = ls())
 #################################################################################################################
 # TODO
 #################################################################################################################
@@ -58,15 +58,17 @@ rm("wb.espesamiento")
 #################################################################################################################
 
 # Semana de la cual se rescatarán los datos
-semana_inicio <- 21
-semana_termino <- 22
+semana_inicio <- 45
+semana_termino <- 49
 year <- 2020
 
 # Se tabaja con una df temporal para limpiar los datos de los indices de marcha 0
 # OJO!!! CAMBIAR EL DROP_NA YA QUE PUEDE ELIMINAR DATOS DE CARGA REALES
 # CAMBIAR POR UN PROM ULTIMOS DÏAS
-.tmp_esp <- df_espesamiento %>% dplyr::filter(indice == 1) %>% drop_na(sequedad, tasaCaptura)
-.tmp_dh <- df_deshidratacion %>% dplyr::filter(indice == 1) %>% 
+.tmp_esp <- df_espesamiento %>% dplyr::filter(indice == 1,
+                                              sem <= semana_termino) %>% drop_na(sequedad, tasaCaptura)
+.tmp_dh <- df_deshidratacion %>% dplyr::filter(indice == 1,
+                                               sem <= semana_termino) %>% 
   mutate(sequedad = if_else(is.na(sequedad), (lag(sequedad, 1) + lag(sequedad,2) + lag(sequedad, 3))/3, sequedad),
          tasaCaptura = if_else(is.na(tasaCaptura), (lag(tasaCaptura, 1) + lag(tasaCaptura,2) + lag(tasaCaptura, 3))/3, tasaCaptura)
          )
@@ -96,6 +98,7 @@ for (semana in semana_inicio:semana_termino) {
   semana_ini <- semana
   semana_term <- semana - 15
   
+  # Correción para darle el formato apropiado de fecha
   if (semana_ini %in% 1:9){
     semana_ini <- paste0("0", as.character(semana_ini))
   }
@@ -118,6 +121,7 @@ for (semana in semana_inicio:semana_termino) {
   }
   
   print("Comparativa concentracion: Done")
+  
   #################################################################################################################
   # STOCK VS. SCADA
   #################################################################################################################
